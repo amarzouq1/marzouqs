@@ -69,7 +69,7 @@ export default function LoginPage() {
             <div className="absolute inset-0 rounded-2xl bg-cobalt/30 blur-xl -z-10 scale-150" />
           </div>
           <h1 className="text-2xl font-black text-white mb-1">
-            <span className="text-cobalt-gradient">Marzouq's</span> Gaming
+            <span className="text-cobalt-gradient">{"Marzouq's"}</span> Gaming
           </h1>
           <p className="text-white/40 text-sm">Enter the arena</p>
         </motion.div>

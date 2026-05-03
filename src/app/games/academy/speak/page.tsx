@@ -300,7 +300,7 @@ export default function HowToSpeakPage() {
                   return (
                     <div key={i} className={`p-4 rounded-xl border ${tagColor(c.tag)}`}>
                       <div className="font-bold text-sm mb-1">{r.s.situation}</div>
-                      <div className="text-sm opacity-80 mb-1">"{c.text.slice(0, 60)}..."</div>
+                      <div className="text-sm opacity-80 mb-1">{`"${c.text.slice(0, 60)}..."`}</div>
                       <div className="text-xs opacity-70">{c.feedback}</div>
                       <span className="text-xs font-black">{c.score} pts</span>
                     </div>

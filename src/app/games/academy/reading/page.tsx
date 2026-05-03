@@ -552,7 +552,7 @@ export default function ReadingPage() {
                   className="btn-cobalt px-8 py-3 rounded-xl font-bold flex items-center gap-2"
                 >
                   <BookOpen className="w-5 h-5" />
-                  I'm Ready — Start Quiz
+                  {"I'm Ready — Start Quiz"}
                 </motion.button>
               </div>
             </motion.div>

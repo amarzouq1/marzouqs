@@ -32,7 +32,7 @@ export default function NotFound() {
 
         <h1 className="text-2xl font-bold text-white mb-3">Stage Not Found</h1>
         <p className="text-white/50 mb-8 leading-relaxed">
-          This level doesn't exist in our world. Maybe it's still being built, or you took a wrong turn at the flagpole.
+          {"This level doesn't exist in our world. Maybe it's still being built, or you took a wrong turn at the flagpole."}
         </p>
 
         <div className="flex gap-3 justify-center">
