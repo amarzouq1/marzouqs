@@ -33,11 +33,11 @@ export const metadata: Metadata = {
   keywords: ['gaming', 'chess', 'platformer', 'educational', 'browser games', 'PWA'],
   authors: [{ name: "Marzouq's Gaming Center" }],
   creator: "Marzouq's Gaming Center",
-  metadataBase: new URL('https://marzouqgaming.com'),
+  metadataBase: new URL('https://marzouqs.com'),
   openGraph: {
     type: 'website',
     locale: 'en_US',
-    url: 'https://marzouqgaming.com',
+    url: 'https://marzouqs.com',
     title: "Marzouq's Gaming Center",
     description: "Where Precision Meets Play",
     siteName: "Marzouq's Gaming Center",
