@@ -374,6 +374,8 @@ export default function ReadingPage() {
   const [score, setScore] = useState(0);
   const [showExplanation, setShowExplanation] = useState(false);
   const timerRef = useRef<NodeJS.Timeout>();
+  const beginQuizRef = useRef<() => void>(() => {});
+  const autoSubmitRef = useRef<() => void>(() => {});
 
   const startPassage = (p: Passage) => {
     setPassage(p);
@@ -384,12 +386,83 @@ export default function ReadingPage() {
     setScore(0);
   };
 
+  const beginQuiz = useCallback(() => {
+    clearInterval(timerRef.current);
+    setPhase('quiz');
+    setQIdx(0);
+    setChosen(null);
+    setConfirmed(false);
+    setShowExplanation(false);
+  }, []);
+
+  const advance = useCallback((lastAns?: QuizAnswer) => {
+    if (!passage) return;
+    const nextIdx = qIdx + 1;
+
+    if (lastAns !== undefined) {
+      setAnswers(prev => {
+        const merged = [...prev, lastAns];
+        if (nextIdx >= passage.questions.length) {
+          const finalScore = merged.reduce(
+            (a, x) => a + (x.correct ? 100 + Math.round(((QUESTION_TIME - x.time) / QUESTION_TIME) * 100) : 0),
+            0
+          );
+          saveLocalScore('reading', finalScore);
+          setPhase('results');
+        }
+        return merged;
+      });
+      if (nextIdx < passage.questions.length) {
+        setQIdx(nextIdx);
+        setChosen(null);
+        setConfirmed(false);
+        setShowExplanation(false);
+      }
+      return;
+    }
+
+    if (nextIdx >= passage.questions.length) {
+      setAnswers(prev => {
+        const finalScore = prev.reduce(
+          (a, x) => a + (x.correct ? 100 + Math.round(((QUESTION_TIME - x.time) / QUESTION_TIME) * 100) : 0),
+          0
+        );
+        saveLocalScore('reading', finalScore);
+        return prev;
+      });
+      setPhase('results');
+    } else {
+      setQIdx(nextIdx);
+      setChosen(null);
+      setConfirmed(false);
+      setShowExplanation(false);
+    }
+  }, [passage, qIdx]);
+
+  const autoSubmit = useCallback(() => {
+    if (!passage) return;
+    const ans: QuizAnswer = { chosen: null, correct: false, time: QUESTION_TIME };
+    advance(ans);
+  }, [passage, advance]);
+
+  useEffect(() => {
+    beginQuizRef.current = beginQuiz;
+  }, [beginQuiz]);
+
+  useEffect(() => {
+    autoSubmitRef.current = autoSubmit;
+  }, [autoSubmit]);
+
   // Reading timer
   useEffect(() => {
     if (phase !== 'reading') return;
     timerRef.current = setInterval(() => {
       setTimeLeft(t => {
-        if (t <= 1) { clearInterval(timerRef.current); beginQuiz(); return 0; }
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          beginQuizRef.current();
+          return 0;
+        }
         return t - 1;
       });
     }, 1000);
@@ -402,62 +475,48 @@ export default function ReadingPage() {
     setQTime(QUESTION_TIME);
     timerRef.current = setInterval(() => {
       setQTime(t => {
-        if (t <= 1) { clearInterval(timerRef.current); autoSubmit(); return 0; }
+        if (t <= 1) {
+          clearInterval(timerRef.current);
+          autoSubmitRef.current();
+          return 0;
+        }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(timerRef.current);
   }, [qIdx, phase, confirmed]);
 
-  const beginQuiz = () => {
-    clearInterval(timerRef.current);
-    setPhase('quiz');
-    setQIdx(0);
-    setChosen(null);
-    setConfirmed(false);
-    setShowExplanation(false);
-  };
-
-  const autoSubmit = () => {
-    if (!passage) return;
-    const q = passage.questions[qIdx];
-    const ans: QuizAnswer = { chosen: null, correct: false, time: QUESTION_TIME };
-    setAnswers(prev => [...prev, ans]);
-    advance(ans);
-  };
-
-  const submitAnswer = () => {
+  const submitAnswer = useCallback(() => {
     if (!passage || chosen === null) return;
     clearInterval(timerRef.current);
     const q = passage.questions[qIdx];
     const correct = chosen === q.correct;
-    const timeBonus = Math.round(qTime / QUESTION_TIME * 100);
+    const timeBonus = Math.round((qTime / QUESTION_TIME) * 100);
     const pts = correct ? 100 + timeBonus : 0;
     setScore(s => s + pts);
     const ans: QuizAnswer = { chosen, correct, time: QUESTION_TIME - qTime };
     setAnswers(prev => [...prev, ans]);
     setConfirmed(true);
     setShowExplanation(true);
-  };
+  }, [passage, chosen, qIdx, qTime]);
 
-  const advance = (lastAns?: QuizAnswer) => {
-    if (!passage) return;
-    const next = qIdx + 1;
-    if (next >= passage.questions.length) {
-      setPhase('results');
-      const finalScore = answers.concat(lastAns ?? []).reduce((a, x) => a + (x.correct ? 100 + Math.round((QUESTION_TIME - x.time) / QUESTION_TIME * 100) : 0), 0);
-      saveLocalScore('reading', finalScore);
-    } else {
-      setQIdx(next);
-      setChosen(null);
-      setConfirmed(false);
-      setShowExplanation(false);
-    }
-  };
+  useEffect(() => {
+    if (phase !== 'quiz' || confirmed || !passage) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key >= '1' && e.key <= '4') {
+        const i = parseInt(e.key, 10) - 1;
+        const n = passage.questions[qIdx]?.options.length ?? 0;
+        if (i < n) setChosen(i);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [phase, confirmed, passage, qIdx]);
 
   const restart = () => { setPhase('select'); setPassage(null); };
 
   const correctCount = answers.filter(a => a.correct).length;
+  const totalQuizQs = passage?.questions.length ?? 0;
 
   // Timer bar color
   const timeColor = (t: number, max: number) => t / max > 0.5 ? '#00aaff' : t / max > 0.25 ? '#ffaa00' : '#ff4444';
@@ -486,7 +545,7 @@ export default function ReadingPage() {
           {/* ── SELECT ── */}
           {phase === 'select' && (
             <motion.div key="select" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-              <p className="text-white/60 mb-6">Choose a passage to read. You have 3 minutes, then answer 5 comprehension questions.</p>
+              <p className="text-white/60 mb-6">Choose a passage to read. You have 3 minutes, then answer a short multiple-choice quiz on that text. Keys 1–4 pick an option.</p>
               <div className="grid gap-4">
                 {PASSAGES.map(p => (
                   <motion.button
@@ -689,12 +748,18 @@ export default function ReadingPage() {
             <motion.div key="results" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}>
               <div className="glass-dark rounded-2xl p-8 text-center border border-cobalt/30 mb-6">
                 <div className="text-6xl mb-4">
-                  {correctCount === 5 ? '🏆' : correctCount >= 3 ? '🌟' : '📖'}
+                  {totalQuizQs > 0 && correctCount === totalQuizQs ? '🏆' : correctCount >= Math.ceil(totalQuizQs * 0.6) ? '🌟' : '📖'}
                 </div>
                 <h2 className="text-2xl font-bold text-white mb-2">
-                  {correctCount === 5 ? 'Perfect Score!' : correctCount >= 4 ? 'Excellent!' : correctCount >= 3 ? 'Good Job!' : 'Keep Practicing!'}
+                  {totalQuizQs > 0 && correctCount === totalQuizQs
+                    ? 'Perfect Score!'
+                    : totalQuizQs > 0 && correctCount >= Math.ceil(totalQuizQs * 0.8)
+                      ? 'Excellent!'
+                      : totalQuizQs > 0 && correctCount >= Math.ceil(totalQuizQs * 0.6)
+                        ? 'Good Job!'
+                        : 'Keep Practicing!'}
                 </h2>
-                <div className="text-5xl font-bold text-cobalt-bright mb-1">{correctCount}/5</div>
+                <div className="text-5xl font-bold text-cobalt-bright mb-1">{correctCount}/{totalQuizQs || '—'}</div>
                 <p className="text-white/50 mb-6">questions correct</p>
                 <div className="grid grid-cols-2 gap-3 text-left">
                   <div className="glass rounded-xl p-3">
@@ -702,7 +767,7 @@ export default function ReadingPage() {
                     <div className="text-white/40 text-xs">Total Points</div>
                   </div>
                   <div className="glass rounded-xl p-3">
-                    <div className="text-cobalt-bright text-xl font-bold">{Math.round(correctCount / 5 * 100)}%</div>
+                    <div className="text-cobalt-bright text-xl font-bold">{totalQuizQs ? Math.round((correctCount / totalQuizQs) * 100) : 0}%</div>
                     <div className="text-white/40 text-xs">Accuracy</div>
                   </div>
                 </div>

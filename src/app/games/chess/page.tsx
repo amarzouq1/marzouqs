@@ -65,6 +65,20 @@ export default function ChessPage() {
 
   const formatClock = (s: number) => `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`;
 
+  const handleGameOver = useCallback((state: GameState) => {
+    if (state.status === 'checkmate' || state.status === 'stalemate' || state.status === 'draw') {
+      let result: 1 | 0.5 | 0 = 0.5;
+      if (state.status === 'checkmate') result = state.winner === playerColor ? 1 : 0;
+      const aiElo = AI_ELO[difficulty];
+      setPlayerElo((elo) => {
+        const newElo = calculateElo(elo, aiElo, result);
+        localStorage.setItem('mgc_chess_elo', String(newElo));
+        saveLocalScore('chess', newElo, { result: state.status, difficulty });
+        return newElo;
+      });
+    }
+  }, [playerColor, difficulty]);
+
   // AI move
   useEffect(() => {
     if (game.turn !== (playerColor === 'w' ? 'b' : 'w')) return;
@@ -84,19 +98,7 @@ export default function ChessPage() {
     }, 150);
 
     return () => { if (aiWorkerRef.current) clearTimeout(aiWorkerRef.current); };
-  }, [game, playerColor, difficulty]);
-
-  const handleGameOver = (state: GameState) => {
-    if (state.status === 'checkmate' || state.status === 'stalemate' || state.status === 'draw') {
-      let result: 1 | 0.5 | 0 = 0.5;
-      if (state.status === 'checkmate') result = state.winner === playerColor ? 1 : 0;
-      const aiElo = AI_ELO[difficulty];
-      const newElo = calculateElo(playerElo, aiElo, result);
-      setPlayerElo(newElo);
-      localStorage.setItem('mgc_chess_elo', String(newElo));
-      saveLocalScore('chess', newElo, { result: state.status, difficulty });
-    }
-  };
+  }, [game, playerColor, difficulty, handleGameOver]);
 
   const handleSquareClick = useCallback((sq: number) => {
     if (game.turn !== playerColor || game.status !== 'active' || thinking) return;
@@ -130,7 +132,7 @@ export default function ChessPage() {
       setSelected(sq);
       setValidMoves(getMovesForSquare(game, sq));
     }
-  }, [game, selected, validMoves, playerColor, thinking, gameStarted]);
+  }, [game, selected, validMoves, playerColor, thinking, gameStarted, handleGameOver]);
 
   const handlePromotion = (type: PieceType) => {
     if (!promotion || selected === null) return;

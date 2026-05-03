@@ -101,6 +101,9 @@ export default function MathBattlePage() {
   const [streak, setStreak] = useState(0);
   const timerRef = useRef<NodeJS.Timeout>();
   const aiTimerRef = useRef<NodeJS.Timeout>();
+  const resolveRoundRef = useRef<(playerAns: number | null, aiCorrect: boolean, q: BattleQ) => void>(() => {});
+  const nextQuestionRef = useRef<(d: number) => void>(() => {});
+  const questionRef = useRef<BattleQ | null>(null);
 
   const startBattle = () => {
     setPlayer({ hp: MAX_HP, score: 0, name: 'You', avatar: '🧑' });
@@ -110,41 +113,6 @@ export default function MathBattlePage() {
     setStreak(0);
     setPhase('battle');
   };
-
-  const nextQuestion = useCallback((d: number) => {
-    clearTimeout(timerRef.current);
-    clearTimeout(aiTimerRef.current);
-    const q = makeQuestion(d);
-    setQuestion(q);
-    setChosen(null);
-    setLocked(false);
-    setFeedbackP(null);
-    setFeedbackAI(null);
-    setShowDamage(null);
-
-    const timeLimit = Math.max(6, 15 - Math.floor(d / 4));
-    setTimeLeft(timeLimit);
-
-    // AI timer
-    const aiMs = aiResponseTime(aiTimerRef.current ? 0 : 0, d);
-    aiTimerRef.current = setTimeout(() => {
-      // AI answers — chance of correct depends on level
-      const correctChance = [0.5, 0.65, 0.78, 0.88, 0.97][Math.min(aiDiff.level, 4)];
-      const aiCorrect = Math.random() < correctChance;
-      resolveRound(null, aiCorrect, q); // player timed out (null)
-    }, aiResponseTime(aiDiff.level, d) * 1000 * (timeLimit / 15));
-  }, [aiDiff.level]);
-
-  // Round timer
-  useEffect(() => {
-    if (phase !== 'battle' || locked) return;
-    if (timeLeft <= 0) {
-      resolveRound(null, false, question!);
-      return;
-    }
-    timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000);
-    return () => clearTimeout(timerRef.current);
-  }, [timeLeft, phase, locked]);
 
   const resolveRound = useCallback((
     playerAns: number | null,
@@ -202,10 +170,61 @@ export default function MathBattlePage() {
       } else {
         setRound(newRound);
         setDifficulty(newDiff);
-        nextQuestion(newDiff);
+        nextQuestionRef.current(newDiff);
       }
     }, 1600);
-  }, [player, ai, round, difficulty, streak, nextQuestion]);
+  }, [player, ai, round, difficulty, streak]);
+
+  const nextQuestion = useCallback((d: number) => {
+    clearTimeout(timerRef.current);
+    clearTimeout(aiTimerRef.current);
+    const q = makeQuestion(d);
+    setQuestion(q);
+    setChosen(null);
+    setLocked(false);
+    setFeedbackP(null);
+    setFeedbackAI(null);
+    setShowDamage(null);
+
+    const timeLimit = Math.max(6, 15 - Math.floor(d / 4));
+    setTimeLeft(timeLimit);
+
+    const aiDelayMs =
+      aiResponseTime(aiDiff.level, d) * 1000 * (timeLimit / 15);
+    aiTimerRef.current = setTimeout(() => {
+      const correctChance = [0.5, 0.65, 0.78, 0.88, 0.97][Math.min(aiDiff.level, 4)];
+      const aiCorrect = Math.random() < correctChance;
+      resolveRoundRef.current(null, aiCorrect, q);
+    }, aiDelayMs);
+  }, [aiDiff.level]);
+
+  useEffect(() => {
+    resolveRoundRef.current = resolveRound;
+  }, [resolveRound]);
+
+  useEffect(() => {
+    nextQuestionRef.current = nextQuestion;
+  }, [nextQuestion]);
+
+  useEffect(() => {
+    questionRef.current = question;
+  }, [question]);
+
+  // Round timer
+  useEffect(() => {
+    if (phase !== 'battle' || locked) return;
+    if (timeLeft <= 0) {
+      const q = questionRef.current;
+      if (q) {
+        const correctChance = [0.5, 0.65, 0.78, 0.88, 0.97][Math.min(aiDiff.level, 4)];
+        const aiCorrect = Math.random() < correctChance;
+        resolveRoundRef.current(null, aiCorrect, q);
+      }
+      return;
+    }
+    timerRef.current = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+    return () => clearTimeout(timerRef.current);
+  }, [timeLeft, phase, locked, aiDiff.level]);
 
   // Start first question
   useEffect(() => {
@@ -219,7 +238,9 @@ export default function MathBattlePage() {
     clearTimeout(timerRef.current);
     clearTimeout(aiTimerRef.current);
     setChosen(choice);
-    resolveRound(choice, false, question); // AI answer resolved separately
+    const correctChance = [0.5, 0.65, 0.78, 0.88, 0.97][Math.min(aiDiff.level, 4)];
+    const aiCorrect = Math.random() < correctChance;
+    resolveRound(choice, aiCorrect, question);
   };
 
   const hpPercent = (hp: number) => Math.max(0, (hp / MAX_HP) * 100);
