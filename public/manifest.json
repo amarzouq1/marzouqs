@@ -1,0 +1,103 @@
+{
+  "name": "Marzouq's Gaming Center",
+  "short_name": "MarzouqGC",
+  "description": "Marzouq's Gaming Center — Where Precision Meets Play. A luxury, high-performance web gaming portal.",
+  "start_url": "/",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0A0A0A",
+  "theme_color": "#0047FF",
+  "categories": ["games", "entertainment"],
+  "lang": "en",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/api/icon/72",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/96",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/128",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/144",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/152",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/192",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/384",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/api/icon/512",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Desktop homepage"
+    },
+    {
+      "src": "/screenshots/mobile.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Mobile homepage"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Chess Arena",
+      "short_name": "Chess",
+      "description": "Play Chess in the Grandmaster Suite",
+      "url": "/games/chess",
+      "icons": [{ "src": "/api/icon/96", "sizes": "96x96" }]
+    },
+    {
+      "name": "The Academy",
+      "short_name": "Academy",
+      "description": "Learn through elite educational games",
+      "url": "/games/academy/math",
+      "icons": [{ "src": "/api/icon/96", "sizes": "96x96" }]
+    },
+    {
+      "name": "Legendary Icons",
+      "short_name": "Legends",
+      "description": "Speed and platforming games",
+      "url": "/games/sonic",
+      "icons": [{ "src": "/api/icon/96", "sizes": "96x96" }]
+    }
+  ]
+}
